@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, send_file, render_template
 from flask_cors import CORS
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw
 import io
 import base64
 import os
@@ -33,8 +33,8 @@ def processar_imagem():
         metade_esq = imagem.crop((0, 0, largura // 2, altura))
         metade_dir = imagem.crop((largura // 2, 0, largura, altura))
         
-        # Criar mockup com CANECAS VISÍVEIS
-        resultado = criar_mockup_com_canecas(metade_esq, metade_dir)
+        # Criar template limpo com canecas
+        resultado = criar_template_canecas(metade_esq, metade_dir)
         
         # Gerar preview
         buffer = io.BytesIO()
@@ -51,97 +51,100 @@ def processar_imagem():
             'success': True,
             'preview': f'data:image/png;base64,{preview_data}',
             'download_id': output_path,
-            'message': '✅ Canecas personalizadas criadas com sucesso!'
+            'message': '✅ Canecas personalizadas criadas!'
         })
         
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
-def criar_mockup_com_canecas(imagem_esq, imagem_dir):
-    """Cria mockup com CANECAS BRANCAS visíveis personalizadas com as imagens"""
+def criar_template_canecas(imagem_esq, imagem_dir):
+    """Cria template limpo com 2 canecas brancas redondas"""
     
-    # Criar canvas principal
+    # Criar canvas com fundo BRANCO
     largura = 1000
-    altura = 1000
-    canvas = Image.new('RGB', (largura, altura), color='#1a1a1a')
+    altura = 600
+    canvas = Image.new('RGB', (largura, altura), color='white')
     draw = ImageDraw.Draw(canvas)
     
-    # === CABEÇALHO ===
-    draw.rectangle([0, 0, largura, 100], fill='#2d2d2d')
-    draw.text((50, 35), "A EVOLUÇÃO DO HOMEM", fill='white', font_size=20)
-    draw.text((largura - 120, 35), "HOMER", fill='#ff4444', font_size=20)
+    # Tamanho das canecas
+    diametro_caneca = 300
+    raio = diametro_caneca // 2
     
-    # === TÍTULOS DAS CANECAS ===
-    draw.text((180, 120), "Não me perturbe", fill='#cccccc', font_size=16)
-    draw.text((630, 120), "Estou ocupada fazendo nada", fill='#cccccc', font_size=16)
+    # Posições das canecas (centralizadas verticalmente)
+    y_centro = altura // 2
+    pos_esq = (200, y_centro - raio)
+    pos_dir = (600, y_centro - raio)
     
-    # === CRIAR CANECAS BRANCAS PERSONALIZADAS ===
-    tamanho_caneca = (300, 400)
+    # === CANECA ESQUERDA (alça para ESQUERDA) ===
+    desenhar_caneca_redonda(canvas, draw, pos_esq, diametro_caneca, imagem_esq, alça_esquerda=True)
     
-    # Redimensionar imagens
-    img_esq_redim = imagem_esq.resize(tamanho_caneca, Image.Resampling.LANCZOS)
-    img_dir_redim = imagem_dir.resize(tamanho_caneca, Image.Resampling.LANCZOS)
-    
-    # Posições das canecas
-    pos_esq = (100, 180)
-    pos_dir = (550, 180)
-    
-    # === CANECA ESQUERDA - BRANCA COM IMAGEM ===
-    caneca_esq = criar_caneca_branca_com_imagem(img_esq_redim)
-    canvas.paste(caneca_esq, pos_esq)
-    
-    # === CANECA DIREITA - BRANCA COM IMAGEM ===
-    caneca_dir = criar_caneca_branca_com_imagem(img_dir_redim)
-    canvas.paste(caneca_dir, pos_dir)
-    
-    # === LABELS DAS CANECAS ===
-    draw.rectangle([pos_esq[0] - 10, pos_esq[1] + 420, pos_esq[0] + 310, pos_esq[1] + 460], fill='#333333')
-    draw.rectangle([pos_dir[0] - 10, pos_dir[1] + 420, pos_dir[0] + 310, pos_dir[1] + 460], fill='#333333')
-    
-    draw.text((pos_esq[0] + 80, pos_esq[1] + 435), "CANECA ESQUERDA", fill='white', font_size=14)
-    draw.text((pos_dir[0] + 80, pos_dir[1] + 435), "CANECA DIREITA", fill='white', font_size=14)
-    
-    # === TEXTO "Rescolação" ===
-    draw.text((largura // 2 - 50, 650), "Rescolação", fill='#aaaaaa', font_size=16)
-    
-    # === RODAPÉ ===
-    draw.rectangle([0, altura - 80, largura, altura], fill='#2d2d2d')
-    draw.text((50, altura - 50), "Necroletário", fill='#999999', font_size=14)
-    draw.text((largura - 150, altura - 50), "Homestágio", fill='#999999', font_size=14)
+    # === CANECA DIREITA (alça para DIREITA) ===
+    desenhar_caneca_redonda(canvas, draw, pos_dir, diametro_caneca, imagem_dir, alça_esquerda=False)
     
     return canvas
 
-def criar_caneca_branca_com_imagem(imagem):
-    """Cria uma caneca BRANCA com a imagem personalizada no centro"""
-    largura, altura = 320, 420  # Tamanho maior para incluir borda branca
+def desenhar_caneca_redonda(canvas, draw, posicao, diametro, imagem, alça_esquerda=True):
+    """Desenha uma caneca redonda branca com imagem personalizada"""
+    x, y = posicao
+    raio = diametro // 2
+    centro_x = x + raio
+    centro_y = y + raio
     
-    # Criar caneca branca (fundo)
-    caneca = Image.new('RGB', (largura, altura), color='white')
-    draw = ImageDraw.Draw(caneca)
+    # === CORPO DA CANECA (círculo branco) ===
+    draw.ellipse([x, y, x + diametro, y + diametro], fill='white', outline='#e0e0e0', width=3)
     
-    # Adicionar borda arredondada à caneca
-    draw.rounded_rectangle([0, 0, largura, altura], radius=25, fill='white', outline='#cccccc', width=3)
+    # === ÁREA DA IMAGEM (círculo menor dentro da caneca) ===
+    diametro_imagem = diametro - 40  # Deixar borda
+    raio_imagem = diametro_imagem // 2
+    x_imagem = centro_x - raio_imagem
+    y_imagem = centro_y - raio_imagem
     
-    # Área onde a imagem será colocada (centralizada, menor que a caneca)
-    area_imagem = (40, 40, largura - 40, altura - 80)  # Deixar espaço para a base
+    # Criar máscara circular para a imagem
+    mascara = Image.new('L', (diametro_imagem, diametro_imagem), 0)
+    draw_mascara = ImageDraw.Draw(mascara)
+    draw_mascara.ellipse([0, 0, diametro_imagem, diametro_imagem], fill=255)
     
-    # Redimensionar imagem para caber na área
-    img_redim = imagem.resize((area_imagem[2] - area_imagem[0], area_imagem[3] - area_imagem[1]), 
-                             Image.Resampling.LANCZOS)
+    # Redimensionar imagem para caber no círculo
+    img_redim = imagem.resize((diametro_imagem, diametro_imagem), Image.Resampling.LANCZOS)
     
-    # Colocar imagem na caneca
-    caneca.paste(img_redim, area_imagem[:2])
+    # Aplicar máscara circular à imagem
+    img_circular = Image.new('RGBA', (diametro_imagem, diametro_imagem))
+    img_circular.paste(img_redim, (0, 0), mascara)
     
-    # Adicionar base da caneca
-    draw.rectangle([80, altura - 40, largura - 80, altura - 20], fill='#e0e0e0')  # Base cinza
-    draw.ellipse([70, altura - 50, 90, altura - 30], fill='#e0e0e0')  # Lateral esquerda
-    draw.ellipse([largura - 90, altura - 50, largura - 70, altura - 30], fill='#e0e0e0')  # Lateral direita
+    # Colocar imagem circular na caneca
+    canvas.paste(img_circular, (x_imagem, y_imagem), img_circular)
     
-    # Adicionar alça da caneca
-    draw.ellipse([largura - 50, altura // 2 - 40, largura - 10, altura // 2 + 40], 
-                outline='#cccccc', width=3)
+    # === ALÇA DA CANECA ===
+    if alça_esquerda:
+        # Alça para ESQUERDA
+        alça_x1 = x - 30
+        alça_x2 = x + 10
+    else:
+        # Alça para DIREITA
+        alça_x1 = x + diametro - 10
+        alça_x2 = x + diametro + 30
     
-    return caneca
+    alça_y1 = centro_y - 40
+    alça_y2 = centro_y + 40
+    
+    # Desenhar alça (semi-círculo)
+    draw.arc([alça_x1, alça_y1, alça_x2, alça_y2], start=270, end=90, fill='#cccccc', width=8)
+    
+    # === BASE DA CANECA ===
+    base_y = y + diametro + 5
+    base_altura = 15
+    base_largura = diametro - 60
+    
+    # Base retangular
+    draw.rectangle([centro_x - base_largura//2, base_y, 
+                   centro_x + base_largura//2, base_y + base_altura], 
+                   fill='#f0f0f0', outline='#dddddd', width=1)
+    
+    # Cantos arredondados da base
+    draw.ellipse([centro_x - base_largura//2 - 5, base_y - 3, 
+                  centro_x - base_largura//2 + 5, base_y + 7], fill='#f0f0f0')
+    draw.ellipse([centro_x + base_largura//2 - 5, base_y - 3, 
+                  centro_x + base_largura//2 + 5, base_y + 7], fill='#f0f0f0')
 
 @app.route('/download/<path:file_path>')
 def download(file_path):
