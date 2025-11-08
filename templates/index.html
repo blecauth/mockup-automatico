@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Mockup Automático</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .upload-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        @media (max-width: 768px) {
+            .upload-section {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .upload-box {
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+        }
+
+        .upload-box:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .upload-box h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .upload-box p {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 0.9em;
+        }
+
+        .file-input {
+            margin: 15px 0;
+        }
+
+        .file-input input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            background: white;
+        }
+
+        .process-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 20px 0;
+        }
+
+        .process-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .process-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .preview-section {
+            display: none;
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .preview-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            border: 3px solid #e0e0e0;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1em;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(76, 175, 80, 0.3);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            text-align: center;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .file-info {
+            margin-top: 10px;
+            font-size: 0.9em;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎨 Gerador de Mockup Automático</h1>
+            <p>Faça upload do PSD e da imagem para gerar seu mockup personalizado</p>
+        </div>
+
+        <div class="content">
+            <div class="upload-section">
+                <div class="upload-box">
+                    <h3>📁 Template PSD</h3>
+                    <p>Arraste ou selecione seu arquivo .PSD</p>
+                    <div class="file-input">
+                        <input type="file" id="psdFile" accept=".psd">
+                    </div>
+                    <div id="psdInfo" class="file-info"></div>
+                </div>
+
+                <div class="upload-box">
+                    <h3>🖼️ Imagem para Canecas</h3>
+                    <p>Selecione a imagem que será dividida nas canecas</p>
+                    <div class="file-input">
+                        <input type="file" id="imageFile" accept="image/*">
+                    </div>
+                    <div id="imageInfo" class="file-info"></div>
+                </div>
+            </div>
+
+            <div style="text-align: center;">
+                <button class="process-btn" onclick="processar()" id="processBtn">
+                    🚀 Gerar Mockup
+                </button>
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Processando sua imagem...</p>
+            </div>
+
+            <div id="messageArea"></div>
+
+            <div class="preview-section" id="previewSection">
+                <h2>👁️ Prévia do Resultado</h2>
+                <img id="previewImage" class="preview-image">
+                <div>
+                    <button class="download-btn" onclick="baixar()">
+                        📥 Download da Imagem
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentDownloadId = null;
+
+        // Mostrar informações dos arquivos selecionados
+        document.getElementById('psdFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('psdInfo').textContent = 
+                    `Arquivo: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+            }
+        });
+
+        document.getElementById('imageFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('imageInfo').textContent = 
+                    `Arquivo: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`;
+            }
+        });
+
+        async function processar() {
+            const psdFile = document.getElementById('psdFile').files[0];
+            const imageFile = document.getElementById('imageFile').files[0];
+            const messageArea = document.getElementById('messageArea');
+            
+            // Limpar mensagens anteriores
+            messageArea.innerHTML = '';
+
+            if (!psdFile || !imageFile) {
+                showMessage('Por favor, selecione ambos os arquivos!', 'error');
+                return;
+            }
+
+            // Mostrar loading
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('processBtn').disabled = true;
+
+            const formData = new FormData();
+            formData.append('psd', psdFile);
+            formData.append('imagem', imageFile);
+
+            try {
+                const response = await fetch('/processar', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    showMessage(data.message || 'Processamento concluído com sucesso!', 'success');
+                    
+                    // Mostrar prévia
+                    document.getElementById('previewImage').src = data.preview;
+                    document.getElementById('previewSection').style.display = 'block';
+                    currentDownloadId = data.download_id;
+                    
+                } else {
+                    showMessage('Erro: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showMessage('Erro de conexão: ' + error, 'error');
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('processBtn').disabled = false;
+            }
+        }
+
+        function baixar() {
+            if (currentDownloadId) {
+                window.open('/download/' + encodeURIComponent(currentDownloadId));
+            } else {
+                showMessage('Nenhum arquivo disponível para download', 'error');
+            }
+        }
+
+        function showMessage(message, type) {
+            const messageArea = document.getElementById('messageArea');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = message;
+            messageArea.appendChild(messageDiv);
+
+            // Auto-remover após 5 segundos
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 5000);
+        }
+
+        // Drag and drop functionality
+        function setupDragDrop(dropZone, input) {
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.style.borderColor = '#764ba2';
+                dropZone.style.background = '#f0f2ff';
+            });
+
+            dropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                dropZone.style.borderColor = '#667eea';
+                dropZone.style.background = '#f8f9ff';
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.style.borderColor = '#667eea';
+                dropZone.style.background = '#f8f9ff';
+                
+                if (e.dataTransfer.files.length) {
+                    input.files = e.dataTransfer.files;
+                    // Trigger change event
+                    input.dispatchEvent(new Event('change'));
+                }
+            });
+        }
+
+        // Aplicar drag and drop às áreas de upload
+        const uploadBoxes = document.querySelectorAll('.upload-box');
+        uploadBoxes.forEach((box, index) => {
+            const input = index === 0 ? document.getElementById('psdFile') : document.getElementById('imageFile');
+            setupDragDrop(box, input);
+        });
+    </script>
+</body>
+</html>
