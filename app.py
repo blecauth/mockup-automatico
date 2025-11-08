@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, send_file, render_template
 from flask_cors import CORS
-from PIL import Image, ImageDraw, ImageOps
+from PIL import Image, ImageDraw, ImageFilter
 import io
 import base64
 import os
@@ -33,8 +33,8 @@ def processar_imagem():
         metade_esq = imagem.crop((0, 0, largura // 2, altura))
         metade_dir = imagem.crop((largura // 2, 0, largura, altura))
         
-        # Criar mockup com canecas personalizadas
-        resultado = criar_mockup_canecas(metade_esq, metade_dir)
+        # Criar mockup com CANECAS VISÍVEIS
+        resultado = criar_mockup_com_canecas(metade_esq, metade_dir)
         
         # Gerar preview
         buffer = io.BytesIO()
@@ -51,106 +51,97 @@ def processar_imagem():
             'success': True,
             'preview': f'data:image/png;base64,{preview_data}',
             'download_id': output_path,
-            'message': '✅ Canecas personalizadas geradas com sucesso!'
+            'message': '✅ Canecas personalizadas criadas com sucesso!'
         })
         
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
 
-def criar_mockup_canecas(imagem_esq, imagem_dir):
-    """Cria mockup com canecas personalizadas aplicando as imagens nas áreas brancas"""
+def criar_mockup_com_canecas(imagem_esq, imagem_dir):
+    """Cria mockup com CANECAS BRANCAS visíveis personalizadas com as imagens"""
     
-    # Criar canvas principal (base do seu PSD)
+    # Criar canvas principal
     largura = 1000
-    altura = 800
-    canvas = Image.new('RGB', (largura, altura), color='#1e1e1e')
+    altura = 1000
+    canvas = Image.new('RGB', (largura, altura), color='#1a1a1a')
     draw = ImageDraw.Draw(canvas)
     
-    # === CABEÇALHO (do seu PSD) ===
-    draw.rectangle([0, 0, largura, 80], fill='#2d2d2d')
-    draw.text((50, 25), "A EVOLUÇÃO DO HOMEM", fill='white')
-    draw.text((largura - 150, 25), "HOMER", fill='#ff4444')
+    # === CABEÇALHO ===
+    draw.rectangle([0, 0, largura, 100], fill='#2d2d2d')
+    draw.text((50, 35), "A EVOLUÇÃO DO HOMEM", fill='white', font_size=20)
+    draw.text((largura - 120, 35), "HOMER", fill='#ff4444', font_size=20)
     
-    # === CRIAR CANECAS PERSONALIZADAS ===
+    # === TÍTULOS DAS CANECAS ===
+    draw.text((180, 120), "Não me perturbe", fill='#cccccc', font_size=16)
+    draw.text((630, 120), "Estou ocupada fazendo nada", fill='#cccccc', font_size=16)
     
-    # Tamanho das áreas das canecas
-    largura_caneca = 350
-    altura_caneca = 450
+    # === CRIAR CANECAS BRANCAS PERSONALIZADAS ===
+    tamanho_caneca = (300, 400)
     
-    # Redimensionar imagens para caber nas canecas
-    img_esq_redim = imagem_esq.resize((largura_caneca, altura_caneca), Image.Resampling.LANCZOS)
-    img_dir_redim = imagem_dir.resize((largura_caneca, altura_caneca), Image.Resampling.LANCZOS)
+    # Redimensionar imagens
+    img_esq_redim = imagem_esq.resize(tamanho_caneca, Image.Resampling.LANCZOS)
+    img_dir_redim = imagem_dir.resize(tamanho_caneca, Image.Resampling.LANCZOS)
     
     # Posições das canecas
-    pos_esq = (80, 120)
-    pos_dir = (530, 120)
+    pos_esq = (100, 180)
+    pos_dir = (550, 180)
     
-    # === CANECA ESQUERDA PERSONALIZADA ===
-    caneca_esq = criar_caneca_personalizada(img_esq_redim, pos_esq)
-    canvas.paste(caneca_esq, pos_esq, caneca_esq)  # Usar máscara alpha
+    # === CANECA ESQUERDA - BRANCA COM IMAGEM ===
+    caneca_esq = criar_caneca_branca_com_imagem(img_esq_redim)
+    canvas.paste(caneca_esq, pos_esq)
     
-    # === CANECA DIREITA PERSONALIZADA ===
-    caneca_dir = criar_caneca_personalizada(img_dir_redim, pos_dir)
-    canvas.paste(caneca_dir, pos_dir, caneca_dir)  # Usar máscara alpha
+    # === CANECA DIREITA - BRANCA COM IMAGEM ===
+    caneca_dir = criar_caneca_branca_com_imagem(img_dir_redim)
+    canvas.paste(caneca_dir, pos_dir)
     
-    # === ADICIONAR EFEITO 3D/ILUMINAÇÃO ÀS CANECAS ===
-    adicionar_efeito_caneca(canvas, pos_esq, largura_caneca, altura_caneca)
-    adicionar_efeito_caneca(canvas, pos_dir, largura_caneca, altura_caneca)
+    # === LABELS DAS CANECAS ===
+    draw.rectangle([pos_esq[0] - 10, pos_esq[1] + 420, pos_esq[0] + 310, pos_esq[1] + 460], fill='#333333')
+    draw.rectangle([pos_dir[0] - 10, pos_dir[1] + 420, pos_dir[0] + 310, pos_dir[1] + 460], fill='#333333')
     
-    # === LABELS ===
-    draw.text((pos_esq[0] + 100, pos_esq[1] + altura_caneca + 20), "CANECA ESQUERDA", fill='#ccc')
-    draw.text((pos_dir[0] + 100, pos_dir[1] + altura_caneca + 20), "CANECA DIREITA", fill='#ccc')
+    draw.text((pos_esq[0] + 80, pos_esq[1] + 435), "CANECA ESQUERDA", fill='white', font_size=14)
+    draw.text((pos_dir[0] + 80, pos_dir[1] + 435), "CANECA DIREITA", fill='white', font_size=14)
     
-    # === RODAPÉ (do seu PSD) ===
-    draw.rectangle([0, altura - 60, largura, altura], fill='#2d2d2d')
-    draw.text((50, altura - 40), "Necroletário", fill='#aaa')
-    draw.text((largura - 150, altura - 40), "Homestágio", fill='#aaa')
+    # === TEXTO "Rescolação" ===
+    draw.text((largura // 2 - 50, 650), "Rescolação", fill='#aaaaaa', font_size=16)
+    
+    # === RODAPÉ ===
+    draw.rectangle([0, altura - 80, largura, altura], fill='#2d2d2d')
+    draw.text((50, altura - 50), "Necroletário", fill='#999999', font_size=14)
+    draw.text((largura - 150, altura - 50), "Homestágio", fill='#999999', font_size=14)
     
     return canvas
 
-def criar_caneca_personalizada(imagem, posicao):
-    """Cria uma caneca personalizada aplicando a imagem em formato de caneca"""
+def criar_caneca_branca_com_imagem(imagem):
+    """Cria uma caneca BRANCA com a imagem personalizada no centro"""
+    largura, altura = 320, 420  # Tamanho maior para incluir borda branca
     
-    largura, altura = imagem.size
+    # Criar caneca branca (fundo)
+    caneca = Image.new('RGB', (largura, altura), color='white')
+    draw = ImageDraw.Draw(caneca)
     
-    # Criar máscara em formato de caneca (área branca do seu PSD)
-    mascara = Image.new('L', (largura, altura), 0)
-    draw_mascara = ImageDraw.Draw(mascara)
+    # Adicionar borda arredondada à caneca
+    draw.rounded_rectangle([0, 0, largura, altura], radius=25, fill='white', outline='#cccccc', width=3)
     
-    # Desenhar formato de caneca (retângulo com bordas arredondadas + alça)
+    # Área onde a imagem será colocada (centralizada, menor que a caneca)
+    area_imagem = (40, 40, largura - 40, altura - 80)  # Deixar espaço para a base
     
-    # Corpo principal da caneca (retângulo arredondado)
-    draw_mascara.rounded_rectangle([10, 10, largura - 10, altura - 60], 
-                                 radius=20, fill=255)
+    # Redimensionar imagem para caber na área
+    img_redim = imagem.resize((area_imagem[2] - area_imagem[0], area_imagem[3] - area_imagem[1]), 
+                             Image.Resampling.LANCZOS)
     
-    # Alça da caneca
-    draw_mascara.ellipse([largura - 40, altura//2 - 30, largura - 10, altura//2 + 30], fill=255)
-    draw_mascara.rectangle([largura - 40, altura//2 - 30, largura - 25, altura//2 + 30], fill=255)
+    # Colocar imagem na caneca
+    caneca.paste(img_redim, area_imagem[:2])
     
-    # Aplicar máscara à imagem
-    imagem_com_mascara = Image.new('RGBA', (largura, altura))
-    imagem_com_mascara.paste(imagem, (0, 0), mascara)
+    # Adicionar base da caneca
+    draw.rectangle([80, altura - 40, largura - 80, altura - 20], fill='#e0e0e0')  # Base cinza
+    draw.ellipse([70, altura - 50, 90, altura - 30], fill='#e0e0e0')  # Lateral esquerda
+    draw.ellipse([largura - 90, altura - 50, largura - 70, altura - 30], fill='#e0e0e0')  # Lateral direita
     
-    return imagem_com_mascara
-
-def adicionar_efeito_caneca(canvas, posicao, largura, altura):
-    """Adiciona efeitos de iluminação e sombra para dar aspecto 3D"""
-    draw = ImageDraw.Draw(canvas, 'RGBA')
+    # Adicionar alça da caneca
+    draw.ellipse([largura - 50, altura // 2 - 40, largura - 10, altura // 2 + 40], 
+                outline='#cccccc', width=3)
     
-    x, y = posicao
-    
-    # Sombra suave atrás da caneca
-    for i in range(5):
-        draw.rounded_rectangle(
-            [x - i, y - i, x + largura + i, y + altura + i],
-            radius=25, outline=(0, 0, 0, 30)
-        )
-    
-    # Realce de luz (efeito 3D)
-    draw.rounded_rectangle(
-        [x + 5, y + 5, x + largura - 5, y + 15],
-        radius=10, fill=(255, 255, 255, 80)
-    )
+    return caneca
 
 @app.route('/download/<path:file_path>')
 def download(file_path):
